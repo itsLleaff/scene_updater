@@ -4,14 +4,15 @@
 
 A custom integration for Home Assistant that allows you to dynamically overwrite your physical YAML scenes using a service call. 
 
-Unlike the native `scene.create` service (which only stores scenes in memory until the next reboot), this integration directly updates the states and attributes of the entities inside your YAML files and reloads the scene integration, making your changes permanent.
+Unlike the native `scene.create` service (which only stores scenes in memory until the next reboot), this integration directly updates the states and attributes of the entities inside your YAML files *and* instantly updates the live State Machine, making your changes permanent with zero performance bottlenecks.
 
 ## Features
+* **Zero-Impact Saves (v3.1.0):** Utilizes a dual-layer save architecture. It backs up data to your physical hard drive while instantly injecting the changes into active RAM. This eliminates the need for system-wide scene reloads and completely prevents memory leaks.
 * **UI Configuration (Config Flow):** Installation is fully managed via the Home Assistant UI. No editing `configuration.yaml` required.
 * **Dropdown Scene Selector:** The service call uses a native entity selector (`scene_entity`), allowing you to pick your target scene directly from a UI dropdown.
 * **Atomic File Writing:** Writes to a temporary file first, seamlessly swapping it only upon success. This prevents file corruption in the event of a power outage or system crash.
 * **Smart Attribute Preservation:** Safely updates core state and standard attributes (brightness, color, temperature, etc.) while preserving any custom, non-standard attributes you manually added to your YAML file in the past.
-* **Data Sanitization (v3.0.1):** Automatically parses and cleans complex Home Assistant state data (like color tuples) into standard, safe YAML formatting to ensure total stability.
+* **Data Sanitization:** Automatically parses and cleans complex Home Assistant state data (like `rgb_color` tuples) into standard, safe YAML formatting to ensure total file stability.
 
 ## Installation
 
