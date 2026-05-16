@@ -1,0 +1,19 @@
+save_scene:
+  name: Save Scene
+  description: Overwrites an existing scene in a YAML file with the current states of its entities.
+  fields:
+    scene_name:
+      name: Scene Name
+      description: The exact friendly name of the scene to update (e.g., Living Room Relax).
+      required: true
+      example: Living Room Relax
+      selector:
+        text:
+    file_path:
+      name: File Path
+      description: The path to the scenes YAML file, relative to the config directory. Defaults to scenes.yaml.
+      required: false
+      default: scenes.yaml
+      example: custom_scenes/living_room.yaml
+      selector:
+        text:
