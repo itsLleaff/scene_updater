@@ -1,0 +1,7 @@
+{
+  "services": {
+    "save_scene": {
+      "service": "mdi:pencil"
+    }
+  }
+}
