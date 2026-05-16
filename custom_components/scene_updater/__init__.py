@@ -13,7 +13,6 @@ SAFE_ATTRIBUTES = {
     "percentage", "current_position", "tilt_position"
 }
 
-# V3.0.1 PATCH: Helper function to convert tuples to safe YAML lists
 def sanitize_for_yaml(data):
     """Recursively convert tuples to lists to prevent YAML serialization errors."""
     if isinstance(data, tuple):
@@ -55,9 +54,10 @@ async def async_setup_entry(hass, entry):
                     scenes = yaml.safe_load(file) or []
             except Exception as exc:
                 _LOGGER.error("File Read Error on %s: %s", target_path, exc)
-                return False
+                return None
 
             target_scene_found = False
+            updated_entity_ids = []
 
             for scene in scenes:
                 yaml_name = scene.get("name")
@@ -65,7 +65,10 @@ async def async_setup_entry(hass, entry):
                     target_scene_found = True
                     if "entities" not in scene:
                         _LOGGER.error("Scene '%s' has no entities defined.", yaml_name)
-                        return False
+                        return None
+
+                    # Capture the exact entities attached to this scene
+                    updated_entity_ids = list(scene["entities"].keys())
 
                     for entity_id in scene["entities"]:
                         state = hass.states.get(entity_id)
@@ -79,7 +82,6 @@ async def async_setup_entry(hass, entry):
                             
                             for attr in SAFE_ATTRIBUTES:
                                 if attr in state.attributes:
-                                    # V3.0.1 PATCH: Pass the attribute through the sanitizer before saving
                                     entity_data[attr] = sanitize_for_yaml(state.attributes[attr])
                                     
                             scene["entities"][entity_id] = entity_data
@@ -89,7 +91,7 @@ async def async_setup_entry(hass, entry):
 
             if not target_scene_found:
                 _LOGGER.error("Scene linked to entity '%s' not found in %s.", scene_entity, target_path)
-                return False
+                return None
 
             temp_file = f"{target_path}.tmp"
             try:
@@ -97,18 +99,26 @@ async def async_setup_entry(hass, entry):
                     yaml.dump(scenes, file, default_flow_style=False, sort_keys=False, allow_unicode=True)
                 
                 os.replace(temp_file, target_path)
-                return True
+                return updated_entity_ids  # Return the list of entities instead of a boolean
             except Exception as exc:
                 _LOGGER.error("Error writing to %s: %s", target_path, exc)
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
-                return False
+                return None
 
-        success = await hass.async_add_executor_job(update_yaml_file)
+        # Execute file I/O safely and retrieve the list of entities that were just processed
+        entities_to_snapshot = await hass.async_add_executor_job(update_yaml_file)
 
-        if success:
-            _LOGGER.info("Successfully updated scene linked to '%s' in %s.", scene_entity, file_path)
-            await hass.services.async_call("scene", "reload")
+        # V3.1.0 MEMORY LEAK FIX: If file write succeeded, update active memory instantly via scene.create
+        if entities_to_snapshot is not None:
+            _LOGGER.info("Successfully updated physical file for '%s'. Updating active memory.", scene_entity)
+            await hass.services.async_call(
+                "scene", "create",
+                {
+                    "scene_id": target_slug,
+                    "snapshot_entities": entities_to_snapshot
+                }
+            )
 
     hass.services.async_register(DOMAIN, "save_scene", handle_save_scene)
     return True
