@@ -1,0 +1,9 @@
+{
+  "domain": "scene_updater",
+  "name": "Scene Updater",
+  "codeowners": ["itsLleaff"],
+  "dependencies": [],
+  "documentation": "https://github.com/itsLleaff/scene_updater",
+  "iot_class": "local_push",
+  "version": "2.1.0"
+}
