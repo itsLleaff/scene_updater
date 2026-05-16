@@ -13,6 +13,17 @@ SAFE_ATTRIBUTES = {
     "percentage", "current_position", "tilt_position"
 }
 
+# V3.0.1 PATCH: Helper function to convert tuples to safe YAML lists
+def sanitize_for_yaml(data):
+    """Recursively convert tuples to lists to prevent YAML serialization errors."""
+    if isinstance(data, tuple):
+        return list(sanitize_for_yaml(item) for item in data)
+    elif isinstance(data, list):
+        return [sanitize_for_yaml(item) for item in data]
+    elif isinstance(data, dict):
+        return {k: sanitize_for_yaml(v) for k, v in data.items()}
+    return data
+
 async def async_setup(hass, config):
     """Fallback setup method."""
     return True
@@ -25,7 +36,6 @@ async def async_setup_entry(hass, entry):
         scene_entity = call.data.get("scene_entity")
         file_path = call.data.get("file_path", "scenes.yaml")
         
-        # Extract the expected slug from the provided entity_id (e.g., 'living_room_relax' from 'scene.living_room_relax')
         target_slug = scene_entity.split(".")[1] if "." in scene_entity else scene_entity
 
         config_dir = hass.config.config_dir
@@ -51,7 +61,6 @@ async def async_setup_entry(hass, entry):
 
             for scene in scenes:
                 yaml_name = scene.get("name")
-                # Slugify the YAML name so it matches the format of the entity_id
                 if yaml_name and slugify(yaml_name) == target_slug:
                     target_scene_found = True
                     if "entities" not in scene:
@@ -70,7 +79,8 @@ async def async_setup_entry(hass, entry):
                             
                             for attr in SAFE_ATTRIBUTES:
                                 if attr in state.attributes:
-                                    entity_data[attr] = state.attributes[attr]
+                                    # V3.0.1 PATCH: Pass the attribute through the sanitizer before saving
+                                    entity_data[attr] = sanitize_for_yaml(state.attributes[attr])
                                     
                             scene["entities"][entity_id] = entity_data
                         else:
